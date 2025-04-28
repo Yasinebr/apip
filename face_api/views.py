@@ -3,7 +3,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-
+import subprocess
+import threading
+import time
+from rest_framework import viewsets
+from .models import ExternalCamera
+from .serializers import ExternalCameraSerializer
+from django.http import StreamingHttpResponse, HttpResponse
+from django.views import View
 from .models import Person, FaceEncoding, RecognitionLog
 from .serializers import (
     PersonSerializer, RegisterFaceSerializer, RecognizeFaceSerializer,
@@ -227,3 +234,132 @@ class RecognitionLogListAPIView(APIView):
 
         serializer = RecognitionLogSerializer(logs, many=True)
         return Response(serializer.data)
+
+
+class RTSPStreamingThread:
+    def __init__(self, rtsp_url, fps=10):
+        self.rtsp_url = rtsp_url
+        self.fps = fps
+        self.frame = None
+        self.process = None
+        self.stop_event = threading.Event()
+        self.lock = threading.Lock()
+
+    def start(self):
+        threading.Thread(target=self._capture_stream).start()
+
+    def _capture_stream(self):
+        command = [
+            'ffmpeg',
+            '-i', self.rtsp_url,
+            '-f', 'image2pipe',
+            '-pix_fmt', 'bgr24',
+            '-vcodec', 'rawvideo',
+            '-an', '-sn',
+            '-'
+        ]
+
+        try:
+            self.process = subprocess.Popen(command, stdout=subprocess.PIPE)
+
+            while not self.stop_event.is_set():
+                # FFmpegからフレームを取得
+                raw_frame = self.process.stdout.read(1920 * 1080 * 3)  # 解像度によって調整
+
+                if not raw_frame:
+                    break
+
+                # OpenCVでデコード
+                import numpy as np
+                import cv2
+                frame = np.frombuffer(raw_frame, dtype=np.uint8).reshape((1080, 1920, 3))
+
+                # フレームを保存
+                with self.lock:
+                    ret, jpeg = cv2.imencode('.jpg', frame)
+                    self.frame = jpeg.tobytes()
+
+                # フレームレート制御
+                time.sleep(1 / self.fps)
+
+        except Exception as e:
+            print(f"RTSPストリーミングエラー: {e}")
+        finally:
+            if self.process:
+                self.process.terminate()
+                self.process = None
+
+    def get_frame(self):
+        with self.lock:
+            return self.frame
+
+    def stop(self):
+        self.stop_event.set()
+        if self.process:
+            self.process.terminate()
+
+
+class RTSPStreamView(View):
+    """RTSPストリームを提供するビュー"""
+
+    streams = {}  # 複数のストリームを管理するための辞書
+
+    def get(self, request, camera_id):
+        # RTSPのURLはデータベースまたは設定ファイルから取得するべき
+        rtsp_url = self._get_rtsp_url(camera_id)
+
+        if not rtsp_url:
+            return HttpResponse("カメラが見つかりません", status=404)
+
+        # ストリームが存在しない場合は作成
+        if camera_id not in self.streams:
+            stream = RTSPStreamingThread(rtsp_url)
+            stream.start()
+            self.streams[camera_id] = stream
+
+        return StreamingHttpResponse(
+            self._stream_generator(camera_id),
+            content_type='multipart/x-mixed-replace; boundary=frame'
+        )
+
+    def _get_rtsp_url(self, camera_id):
+        # 実際の実装では、データベースなどから取得
+        # テスト用ダミーURLを返す
+        return f"rtsp://example.com/camera/{camera_id}"
+
+    def _stream_generator(self, camera_id):
+        stream = self.streams.get(camera_id)
+
+        if not stream:
+            return
+
+        while True:
+            frame = stream.get_frame()
+
+            if frame is None:
+                time.sleep(0.1)
+                continue
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+
+class ExternalCameraViewSet(viewsets.ModelViewSet):
+    """API برای مدیریت دوربین‌های خارجی"""
+    queryset = ExternalCamera.objects.all()
+    serializer_class = ExternalCameraSerializer
+
+    def get_queryset(self):
+        queryset = ExternalCamera.objects.all()
+
+        # فیلتر کردن بر اساس پروتکل
+        protocol = self.request.query_params.get('protocol', None)
+        if protocol:
+            queryset = queryset.filter(protocol=protocol)
+
+        # فیلتر کردن دوربین‌های فعال
+        active_only = self.request.query_params.get('active', None)
+        if active_only and active_only.lower() in ['true', '1', 't']:
+            queryset = queryset.filter(is_active=True)
+
+        return queryset

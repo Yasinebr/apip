@@ -81,37 +81,43 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- نوار ناوبری -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'web_interface:home' %}">
-                <i class="bi bi-camera"></i> سیستم تشخیص چهره
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'web_interface:register' %}">ثبت چهره جدید</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            بروزرسانی اطلاعات
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{% url 'web_interface:update' %}">بروزرسانی اطلاعات شخصی</a></li>
-                            <li><a class="dropdown-item" href="{% url 'web_interface:update_face' %}">بروزرسانی تصویر چهره</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-                </ul>
-            </div>
-                </ul>
-            </div>
+<!-- نوار ناوبری -->
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'web_interface:home' %}">
+            <i class="bi bi-camera"></i> سیستم تشخیص چهره
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'web_interface:register' %}">ثبت چهره جدید</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="recognizeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        تشخیص چهره
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="recognizeDropdown">
+                        <li><a class="dropdown-item" href="{% url 'web_interface:recognize' %}">تشخیص با تصویر</a></li>
+                        <li><a class="dropdown-item" href="{% url 'web_interface:live_recognize' %}">تشخیص زنده</a></li>
+                        <li><a class="dropdown-item" href="{% url 'web_interface:external_camera' %}">دوربین خارجی</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="updateDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        بروزرسانی اطلاعات
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="updateDropdown">
+                        <li><a class="dropdown-item" href="{% url 'web_interface:update' %}">بروزرسانی اطلاعات شخصی</a></li>
+                        <li><a class="dropdown-item" href="{% url 'web_interface:update_face' %}">بروزرسانی تصویر چهره</a></li>
+                    </ul>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- محتوای اصلی -->
     <div class="container main-content">

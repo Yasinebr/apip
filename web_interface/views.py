@@ -25,3 +25,13 @@ class UpdateView(TemplateView):
 class UpdateFaceView(TemplateView):
     """صفحه بروزرسانی تصویر چهره"""
     template_name = 'web_interface/update_face.html'
+
+
+class LiveRecognizeView(TemplateView):
+    """صفحه تشخیص چهره زنده"""
+    template_name = 'web_interface/live_recognize.html'
+
+
+class ExternalCameraView(TemplateView):
+    """صفحه تشخیص چهره با دوربین خارجی"""
+    template_name = 'web_interface/external_camera.html'

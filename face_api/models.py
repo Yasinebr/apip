@@ -60,3 +60,47 @@ class RecognitionLog(models.Model):
 
     def __str__(self):
         return f"{self.person} recognized at {self.timestamp}"
+
+
+# به فایل face_api/models.py اضافه شود
+class ExternalCamera(models.Model):
+    """مدل ذخیره‌سازی اطلاعات دوربین‌های خارجی"""
+    name = models.CharField(max_length=100, verbose_name="نام دوربین")
+    protocol = models.CharField(max_length=20, choices=[
+        ('mjpeg', 'MJPEG'),
+        ('rtsp', 'RTSP'),
+        ('http', 'HTTP')
+    ], verbose_name="پروتکل")
+    url = models.CharField(max_length=255, verbose_name="آدرس دوربین")
+    username = models.CharField(max_length=100, blank=True, null=True, verbose_name="نام کاربری")
+    password = models.CharField(max_length=100, blank=True, null=True, verbose_name="رمز عبور")
+    location = models.CharField(max_length=100, blank=True, null=True, verbose_name="موقعیت دوربین")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ایجاد")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="زمان بروزرسانی")
+
+    class Meta:
+        verbose_name = "دوربین خارجی"
+        verbose_name_plural = "دوربین‌های خارجی"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.protocol})"
+
+    def get_url_with_auth(self):
+        """دریافت URL با اطلاعات احراز هویت"""
+        if not (self.username and self.password):
+            return self.url
+
+        from urllib.parse import urlparse, urlunparse
+
+        parsed_url = urlparse(self.url)
+        netloc = f"{self.username}:{self.password}@{parsed_url.netloc}"
+        return urlunparse((
+            parsed_url.scheme,
+            netloc,
+            parsed_url.path,
+            parsed_url.params,
+            parsed_url.query,
+            parsed_url.fragment
+        ))

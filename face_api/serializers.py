@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Person, FaceEncoding, RecognitionLog
+from .models import Person, FaceEncoding, RecognitionLog, ExternalCamera
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -82,3 +82,25 @@ class RecognitionLogSerializer(serializers.ModelSerializer):
     def get_person_name(self, obj):
         """دریافت نام کامل شخص"""
         return f"{obj.person.first_name} {obj.person.last_name}"
+
+
+# به فایل face_api/serializers.py اضافه شود
+class ExternalCameraSerializer(serializers.ModelSerializer):
+    """سریالایزر برای مدل دوربین خارجی"""
+
+    url_with_auth = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExternalCamera
+        fields = ['id', 'name', 'protocol', 'url', 'username', 'password',
+                  'location', 'is_active', 'url_with_auth']
+        read_only_fields = ['id', 'url_with_auth']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def get_url_with_auth(self, obj):
+        # فقط برای MJPEG و HTTP که مستقیماً در مرورگر قابل استفاده هستند
+        if obj.protocol in ['mjpeg', 'http']:
+            return obj.get_url_with_auth()
+        return None
